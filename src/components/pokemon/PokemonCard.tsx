@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import { TypeBadge } from "./TypeBadge";
 import { TYPE_COLORS, formatPokemonId, capitalize, getArtworkUrl } from "@/lib/constants";
 import { useFavoritesStore } from "@/stores/favorites-store";
+import { useShinyStore } from "@/stores/shiny-store";
 import type { Pokemon } from "@/lib/types";
 
 interface PokemonCardProps {
@@ -16,9 +17,11 @@ interface PokemonCardProps {
 
 export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
   const { isFavorite, toggleFavorite } = useFavoritesStore();
+  const { isShiny, toggleShiny } = useShinyStore();
   const primaryType = pokemon.types[0]?.name ?? "normal";
   const colors = TYPE_COLORS[primaryType] ?? TYPE_COLORS.normal;
   const fav = isFavorite(pokemon.id);
+  const shiny = isShiny(pokemon.id);
 
   return (
     <motion.div
@@ -30,9 +33,9 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
     >
       <Link href={`/pokemon/${pokemon.id}`}>
         <div
-          className="relative overflow-hidden rounded-2xl border border-border/50 p-4 transition-shadow duration-300 group-hover:shadow-lg group-hover:shadow-black/10"
+          className="pokedex-screen relative overflow-hidden rounded-2xl p-4 transition-shadow duration-300 group-hover:shadow-lg group-hover:shadow-black/20"
           style={{
-            background: `linear-gradient(135deg, ${colors.bg}15 0%, ${colors.bg}08 50%, transparent 100%)`,
+            background: `linear-gradient(135deg, ${colors.bg}18 0%, ${colors.bg}08 50%, transparent 100%)`,
           }}
         >
           {/* Background type pattern */}
@@ -42,21 +45,29 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
           />
 
           {/* Pokemon ID */}
-          <p className="text-xs font-bold text-muted-foreground/60">
+          <p className="text-xs font-bold text-muted-foreground/60 font-mono">
             {formatPokemonId(pokemon.id)}
           </p>
 
           {/* Artwork */}
-          <div className="relative mx-auto my-2 h-28 w-28">
+          <div className={`relative mx-auto my-2 h-28 w-28 ${shiny ? "animate-shiny-glow" : ""}`}>
             <Image
-              src={getArtworkUrl(pokemon.id)}
-              alt={pokemon.name}
+              src={getArtworkUrl(pokemon.id, shiny)}
+              alt={`${pokemon.name}${shiny ? " (shiny)" : ""}`}
               fill
               sizes="112px"
               className="object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-110"
               loading={index < 12 ? "eager" : "lazy"}
               priority={index < 4}
             />
+            {/* Shiny sparkles overlay */}
+            {shiny && (
+              <>
+                <Sparkles className="absolute -left-1 top-2 h-3.5 w-3.5 animate-sparkle fill-yellow-300 text-yellow-300" style={{ animationDelay: "0s" }} />
+                <Sparkles className="absolute -right-1 top-6 h-3 w-3 animate-sparkle fill-yellow-200 text-yellow-200" style={{ animationDelay: "0.5s" }} />
+                <Sparkles className="absolute bottom-4 left-1 h-2.5 w-2.5 animate-sparkle fill-yellow-400 text-yellow-400" style={{ animationDelay: "1s" }} />
+              </>
+            )}
           </div>
 
           {/* Name */}
@@ -73,7 +84,26 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
         </div>
       </Link>
 
-      {/* Favorite button - outside of link to prevent navigation */}
+      {/* Shiny toggle - top left */}
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleShiny(pokemon.id);
+        }}
+        className="absolute left-3 top-3 z-10 rounded-full p-1.5 transition-all hover:scale-110"
+        aria-label={shiny ? "Show normal variant" : "Show shiny variant"}
+      >
+        <Sparkles
+          className={`h-4 w-4 transition-colors ${
+            shiny
+              ? "fill-yellow-400 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)]"
+              : "text-muted-foreground/30 group-hover:text-muted-foreground/60"
+          }`}
+        />
+      </button>
+
+      {/* Favorite button - top right */}
       <button
         onClick={(e) => {
           e.preventDefault();
@@ -84,18 +114,13 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
         aria-label={fav ? "Remove from favorites" : "Add to favorites"}
       >
         <Heart
-          className={cn(
-            "h-4 w-4 transition-colors",
+          className={`h-4 w-4 transition-colors ${
             fav
               ? "fill-red-500 text-red-500"
-              : "text-muted-foreground/40 group-hover:text-muted-foreground"
-          )}
+              : "text-muted-foreground/30 group-hover:text-muted-foreground/60"
+          }`}
         />
       </button>
     </motion.div>
   );
-}
-
-function cn(...classes: (string | false | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

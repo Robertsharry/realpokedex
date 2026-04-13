@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { ShinyToggle } from "./ShinyToggle";
 import { Swords, Grid3X3, GitCompareArrows, Heart, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +22,25 @@ export function Navbar() {
     <>
       {/* Desktop Navigation */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-              <Zap className="h-5 w-5 text-primary-foreground" />
+        {/* Red Pokedex accent strip */}
+        <div className="h-1 w-full bg-gradient-to-r from-red-700 via-red-500 to-red-700" />
+
+        <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+          <Link href="/" className="flex items-center gap-3">
+            {/* Scanner lens - the iconic blue circle from the Pokedex */}
+            <div className="relative flex h-10 w-10 items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 animate-scanner-pulse" />
+              <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-cyan-300 to-blue-500" />
+              <div className="absolute inset-[6px] rounded-full bg-gradient-to-br from-white/80 to-cyan-200/60" />
+              <div className="absolute left-[8px] top-[8px] h-2.5 w-2.5 rounded-full bg-white/90" />
             </div>
-            <span className="text-xl font-bold tracking-tight">
+            {/* Indicator lights */}
+            <div className="hidden items-center gap-1.5 sm:flex">
+              <div className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
+              <div className="h-2 w-2 rounded-full bg-yellow-400 shadow-[0_0_4px_rgba(250,204,21,0.4)]" />
+              <div className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.4)]" />
+            </div>
+            <span className="text-xl font-extrabold tracking-tight">
               Real<span className="text-primary">Pokedex</span>
             </span>
           </Link>
@@ -55,7 +69,10 @@ export function Navbar() {
             })}
           </div>
 
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <ShinyToggle />
+            <ThemeToggle />
+          </div>
         </nav>
       </header>
 

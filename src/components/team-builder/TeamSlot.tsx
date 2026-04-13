@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Sparkles } from "lucide-react";
 import { TypeBadge } from "@/components/pokemon/TypeBadge";
 import { capitalize, getArtworkUrl } from "@/lib/constants";
+import { useShinyStore } from "@/stores/shiny-store";
 import type { TeamSlot as TeamSlotType } from "@/lib/types";
 
 interface TeamSlotProps {
@@ -50,6 +51,8 @@ export function TeamSlot({
   }
 
   const pokemon = slot.pokemon;
+  const { isShiny } = useShinyStore();
+  const shiny = isShiny(pokemon.id);
   const primaryType = pokemon.types[0]?.name ?? "normal";
   const totalStats = pokemon.stats.reduce((sum, s) => sum + s.baseStat, 0);
   const filledMoves = slot.moves.filter(Boolean).length;
@@ -79,14 +82,17 @@ export function TeamSlot({
 
       <div className="flex h-full items-center gap-3">
         {/* Sprite */}
-        <div className="relative h-20 w-20 shrink-0">
+        <div className={`relative h-20 w-20 shrink-0 ${shiny ? "animate-shiny-glow" : ""}`}>
           <Image
-            src={getArtworkUrl(pokemon.id)}
-            alt={pokemon.name}
+            src={getArtworkUrl(pokemon.id, shiny)}
+            alt={`${pokemon.name}${shiny ? " (shiny)" : ""}`}
             fill
             sizes="80px"
             className="object-contain"
           />
+          {shiny && (
+            <Sparkles className="absolute -right-1 -top-1 h-3.5 w-3.5 animate-sparkle fill-yellow-400 text-yellow-400" />
+          )}
         </div>
 
         {/* Info */}

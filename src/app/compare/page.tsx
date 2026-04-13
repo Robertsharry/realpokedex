@@ -3,11 +3,12 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { GitCompareArrows, Plus, X } from "lucide-react";
+import { GitCompareArrows, Plus, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TypeBadge } from "@/components/pokemon/TypeBadge";
 import { StatBarGroup } from "@/components/pokemon/StatBar";
 import { PokemonPicker } from "@/components/team-builder/PokemonPicker";
+import { useShinyStore } from "@/stores/shiny-store";
 import { getArtworkUrl, capitalize, STAT_LABELS, STAT_COLORS } from "@/lib/constants";
 import { getDualTypeEffectiveness } from "@/lib/type-effectiveness";
 import type { Pokemon } from "@/lib/types";
@@ -16,6 +17,7 @@ export default function ComparePage() {
   const [pokemonA, setPokemonA] = useState<Pokemon | null>(null);
   const [pokemonB, setPokemonB] = useState<Pokemon | null>(null);
   const [picking, setPicking] = useState<"A" | "B" | null>(null);
+  const { isShiny } = useShinyStore();
 
   function getTypeAdvantage(): string {
     if (!pokemonA || !pokemonB) return "";
@@ -77,14 +79,17 @@ export default function ComparePage() {
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-              <div className="relative mx-auto mb-3 h-40 w-40">
+              <div className={`relative mx-auto mb-3 h-40 w-40 ${isShiny(pokemonA.id) ? "animate-shiny-glow" : ""}`}>
                 <Image
-                  src={getArtworkUrl(pokemonA.id)}
+                  src={getArtworkUrl(pokemonA.id, isShiny(pokemonA.id))}
                   alt={pokemonA.name}
                   fill
                   sizes="160px"
                   className="object-contain drop-shadow-lg"
                 />
+                {isShiny(pokemonA.id) && (
+                  <Sparkles className="absolute -right-1 -top-1 h-4 w-4 animate-sparkle fill-yellow-400 text-yellow-400" />
+                )}
               </div>
               <h3 className="text-lg font-bold">{capitalize(pokemonA.name)}</h3>
               <div className="mt-1 flex justify-center gap-1">
@@ -118,14 +123,17 @@ export default function ComparePage() {
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-              <div className="relative mx-auto mb-3 h-40 w-40">
+              <div className={`relative mx-auto mb-3 h-40 w-40 ${isShiny(pokemonB.id) ? "animate-shiny-glow" : ""}`}>
                 <Image
-                  src={getArtworkUrl(pokemonB.id)}
+                  src={getArtworkUrl(pokemonB.id, isShiny(pokemonB.id))}
                   alt={pokemonB.name}
                   fill
                   sizes="160px"
                   className="object-contain drop-shadow-lg"
                 />
+                {isShiny(pokemonB.id) && (
+                  <Sparkles className="absolute -right-1 -top-1 h-4 w-4 animate-sparkle fill-yellow-400 text-yellow-400" />
+                )}
               </div>
               <h3 className="text-lg font-bold">{capitalize(pokemonB.name)}</h3>
               <div className="mt-1 flex justify-center gap-1">
