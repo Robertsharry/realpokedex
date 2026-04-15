@@ -83,6 +83,29 @@ export interface PokemonMove {
   flinchChance: number;
 }
 
+export interface EncounterMethod {
+  method: string;     // "walk", "surf", "fish", "gift", etc.
+  chance: number;     // max encounter chance %
+  minLevel: number;
+  maxLevel: number;
+}
+
+export interface EncounterVersion {
+  version: string;    // "red", "omega-ruby", etc.
+  methods: EncounterMethod[];
+}
+
+export interface EncounterArea {
+  locationName: string;   // parent location (e.g. "viridian-forest")
+  areaName: string;       // specific area (e.g. "viridian-forest-area")
+  versions: EncounterVersion[];
+}
+
+export interface RegionEncounters {
+  region: string;         // "kanto", "johto", etc.
+  areas: EncounterArea[];
+}
+
 export interface AbilityDetail {
   name: string;
   effectShort: string;

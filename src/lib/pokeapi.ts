@@ -7,6 +7,9 @@ import type {
   PokemonMove,
   AbilityDetail,
   PokemonType,
+  RegionEncounters,
+  EncounterArea,
+  EncounterVersion,
 } from "./types";
 import { getArtworkUrl, getSpriteUrl, getCryUrl, capitalize, ALL_TYPES, TOTAL_POKEMON } from "./constants";
 
@@ -288,4 +291,96 @@ async function fetchFullIndex(): Promise<PokemonIndexEntry[]> {
     })
     .filter((e) => e.id <= TOTAL_POKEMON)
     .sort((a, b) => a.id - b.id);
+}
+
+/** Fetch where a Pokemon can be found, grouped by region.
+ *  Chain: /pokemon/{id}/encounters → /location-area → /location (for region). */
+export async function getPokemonEncounters(
+  id: number | string
+): Promise<RegionEncounters[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = await cachedFetch<any[]>(
+    `${BASE_URL}/pokemon/${id}/encounters`
+  );
+
+  if (!raw || raw.length === 0) return [];
+
+  // 1. Collect unique location-area URLs
+  const areaUrls = [...new Set(raw.map((e) => e.location_area.url as string))];
+
+  // 2. Batch-fetch location-areas to get parent location URLs (all cached)
+  const areaResults = await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    areaUrls.map((url) => cachedFetch<any>(url))
+  );
+
+  // Map area URL → parent location URL & name
+  const areaToLocation = new Map<string, { url: string; name: string }>();
+  areaUrls.forEach((areaUrl, i) => {
+    const loc = areaResults[i].location;
+    areaToLocation.set(areaUrl, { url: loc.url, name: loc.name });
+  });
+
+  // 3. Get unique location URLs and fetch them for region data
+  const uniqueLocationUrls = [
+    ...new Set([...areaToLocation.values()].map((l) => l.url)),
+  ];
+  const locationResults = await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    uniqueLocationUrls.map((url) => cachedFetch<any>(url))
+  );
+
+  const locationToRegion = new Map<string, string>();
+  uniqueLocationUrls.forEach((url, i) => {
+    locationToRegion.set(url, locationResults[i].region?.name ?? "unknown");
+  });
+
+  // 4. Transform raw encounters into clean grouped data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const encounterAreas: (EncounterArea & { region: string })[] = raw.map((enc) => {
+    const areaUrl = enc.location_area.url as string;
+    const areaName = enc.location_area.name as string;
+    const parentLoc = areaToLocation.get(areaUrl)!;
+    const region = locationToRegion.get(parentLoc.url) ?? "unknown";
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const versions: EncounterVersion[] = enc.version_details.map((vd: any) => ({
+      version: vd.version.name as string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      methods: vd.encounter_details.map((ed: any) => ({
+        method: ed.method.name as string,
+        chance: ed.chance as number,
+        minLevel: ed.min_level as number,
+        maxLevel: ed.max_level as number,
+      })),
+    }));
+
+    return {
+      locationName: parentLoc.name,
+      areaName,
+      versions,
+      region,
+    };
+  });
+
+  // 5. Group by region
+  const regionMap = new Map<string, EncounterArea[]>();
+  for (const area of encounterAreas) {
+    const { region, ...rest } = area;
+    if (!regionMap.has(region)) regionMap.set(region, []);
+    regionMap.get(region)!.push(rest);
+  }
+
+  // Sort regions in a logical order and return
+  const regionOrder = [
+    "kanto", "johto", "hoenn", "sinnoh", "unova",
+    "kalos", "alola", "galar", "paldea", "hisui",
+  ];
+  return [...regionMap.entries()]
+    .sort(([a], [b]) => {
+      const ai = regionOrder.indexOf(a);
+      const bi = regionOrder.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    })
+    .map(([region, areas]) => ({ region, areas }));
 }

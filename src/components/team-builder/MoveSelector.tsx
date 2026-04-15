@@ -21,6 +21,7 @@ export function MoveSelector({ slot, onSetMove }: MoveSelectorProps) {
   const [pickerMoveIndex, setPickerMoveIndex] = useState(0);
   const [availableMoves, setAvailableMoves] = useState<PokemonMove[]>([]);
   const [loadingMoves, setLoadingMoves] = useState(false);
+  const [moveError, setMoveError] = useState(false);
   const [search, setSearch] = useState("");
 
   const pokemon = slot.pokemon;
@@ -41,6 +42,7 @@ export function MoveSelector({ slot, onSetMove }: MoveSelectorProps) {
   async function loadAvailableMoves() {
     if (!pokemon) return;
     setLoadingMoves(true);
+    setMoveError(false);
     try {
       const moveList = await getPokemonMoves(pokemon.id);
       const batchSize = 20;
@@ -70,8 +72,8 @@ export function MoveSelector({ slot, onSetMove }: MoveSelectorProps) {
       });
 
       setAvailableMoves(allMoves);
-    } catch (err) {
-      console.error("Failed to load moves:", err);
+    } catch {
+      setMoveError(true);
     }
     setLoadingMoves(false);
   }
@@ -153,6 +155,16 @@ export function MoveSelector({ slot, onSetMove }: MoveSelectorProps) {
                 {Array.from({ length: 10 }, (_, i) => (
                   <Skeleton key={i} className="h-10 w-full" />
                 ))}
+              </div>
+            ) : moveError ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">Failed to load moves.</p>
+                <button
+                  onClick={loadAvailableMoves}
+                  className="mt-2 text-sm font-medium text-primary hover:underline"
+                >
+                  Try Again
+                </button>
               </div>
             ) : (
               <div className="space-y-1">

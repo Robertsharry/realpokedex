@@ -16,6 +16,7 @@ const RENDER_BATCH = 80;
 export function PokemonGrid() {
   const [pokemonIndex, setPokemonIndex] = useState<PokemonIndexEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [renderCount, setRenderCount] = useState(RENDER_BATCH);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
@@ -30,11 +31,12 @@ export function PokemonGrid() {
   useEffect(() => {
     async function loadIndex() {
       setLoading(true);
+      setError(null);
       try {
         const index = await getFullPokemonIndex();
         setPokemonIndex(index);
-      } catch (err) {
-        console.error("Failed to load Pokemon index:", err);
+      } catch {
+        setError("Failed to load Pokemon. Check your connection and try again.");
       }
       setLoading(false);
     }
@@ -198,7 +200,20 @@ export function PokemonGrid() {
       </div>
 
       {/* Pokemon Grid */}
-      {loading ? (
+      {error ? (
+        <div className="py-20 text-center">
+          <p className="text-lg font-medium text-red-400">A wild error appeared!</p>
+          <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.reload()}
+            className="mt-4"
+          >
+            Try Again
+          </Button>
+        </div>
+      ) : loading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: 20 }, (_, i) => (
             <PokemonCardSkeleton key={i} />

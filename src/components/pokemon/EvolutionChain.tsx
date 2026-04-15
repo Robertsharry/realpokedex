@@ -1,11 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { getArtworkUrl, capitalize } from "@/lib/constants";
 import type { EvolutionNode } from "@/lib/types";
+
+function EvolutionSprite({ id, name, className }: { id: number; name: string; className?: string }) {
+  const [imgError, setImgError] = useState(false);
+  if (imgError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-xl bg-muted/20 text-muted-foreground/30">
+        <span className="text-2xl">?</span>
+      </div>
+    );
+  }
+  return (
+    <Image
+      src={getArtworkUrl(id)}
+      alt={name}
+      fill
+      sizes="96px"
+      className={className ?? "object-contain transition-transform group-hover:scale-110"}
+      onError={() => setImgError(true)}
+    />
+  );
+}
 
 interface EvolutionChainProps {
   chain: EvolutionNode;
@@ -43,20 +65,14 @@ function EvolutionStage({
       >
         <Link
           href={`/pokemon/${node.speciesId}`}
-          className={`group relative flex flex-col items-center rounded-2xl p-3 transition-all hover:bg-accent ${
-            isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+          className={`group relative flex flex-col items-center rounded-2xl p-3 transition-all hover:bg-black/[0.06] ${
+            isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-[#e8f4e8]" : ""
           }`}
         >
           <div className="relative h-20 w-20 sm:h-24 sm:w-24">
-            <Image
-              src={getArtworkUrl(node.speciesId)}
-              alt={node.speciesName}
-              fill
-              sizes="96px"
-              className="object-contain transition-transform group-hover:scale-110"
-            />
+            <EvolutionSprite id={node.speciesId} name={node.speciesName} />
           </div>
-          <span className="mt-1 text-xs font-bold sm:text-sm">
+          <span className="mt-1.5 text-sm font-extrabold sm:text-base">
             {capitalize(node.speciesName)}
           </span>
         </Link>
@@ -69,7 +85,7 @@ function EvolutionStage({
               <div className="flex flex-col items-center gap-0.5">
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 {getEvolutionTriggerText(evo) && (
-                  <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+                  <span className="whitespace-nowrap text-xs font-bold text-muted-foreground">
                     {getEvolutionTriggerText(evo)}
                   </span>
                 )}
@@ -109,7 +125,7 @@ export function EvolutionChain({ chain, currentId }: EvolutionChainProps) {
               <div className="flex flex-col items-center gap-0.5">
                 <ArrowRight className="h-5 w-5 text-muted-foreground" />
                 {getEvolutionTriggerText(stage) && (
-                  <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+                  <span className="whitespace-nowrap text-xs font-bold text-muted-foreground">
                     {getEvolutionTriggerText(stage)}
                   </span>
                 )}
@@ -122,20 +138,14 @@ export function EvolutionChain({ chain, currentId }: EvolutionChainProps) {
             >
               <Link
                 href={`/pokemon/${stage.speciesId}`}
-                className={`group flex flex-col items-center rounded-2xl p-3 transition-all hover:bg-accent ${
+                className={`group flex flex-col items-center rounded-2xl p-3 transition-all hover:bg-black/[0.06] ${
                   stage.speciesId === currentId
-                    ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    ? "ring-2 ring-primary ring-offset-2 ring-offset-[#e8f4e8]"
                     : ""
                 }`}
               >
                 <div className="relative h-20 w-20 sm:h-24 sm:w-24">
-                  <Image
-                    src={getArtworkUrl(stage.speciesId)}
-                    alt={stage.speciesName}
-                    fill
-                    sizes="96px"
-                    className="object-contain transition-transform group-hover:scale-110"
-                  />
+                  <EvolutionSprite id={stage.speciesId} name={stage.speciesName} />
                 </div>
                 <span className="mt-1 text-xs font-bold sm:text-sm">
                   {capitalize(stage.speciesName)}

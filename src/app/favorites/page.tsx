@@ -6,36 +6,37 @@ import { Progress } from "@/components/ui/progress";
 import { PokemonCard } from "@/components/pokemon/PokemonCard";
 import { PokemonCardSkeleton } from "@/components/pokemon/PokemonCardSkeleton";
 import { useFavoritesStore } from "@/stores/favorites-store";
-import { getPokemonBatch } from "@/lib/pokeapi";
+import { getFullPokemonIndex } from "@/lib/pokeapi";
 import { GENERATIONS, TOTAL_POKEMON } from "@/lib/constants";
-import type { Pokemon } from "@/lib/types";
+import type { PokemonIndexEntry } from "@/lib/types";
 
 export default function FavoritesPage() {
   const { favoriteIds } = useFavoritesStore();
-  const [pokemon, setPokemon] = useState<Pokemon[]>([]);
+  const [allPokemon, setAllPokemon] = useState<PokemonIndexEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
+  // Load the lightweight index once (shared/cached across the app)
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (favoriteIds.length === 0) {
-        setPokemon([]);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       try {
-        const batch = await getPokemonBatch(favoriteIds);
-        if (!cancelled) setPokemon(batch.sort((a, b) => a.id - b.id));
-      } catch (err) {
-        console.error("Failed to load favorites:", err);
+        const index = await getFullPokemonIndex();
+        if (!cancelled) setAllPokemon(index);
+      } catch {
+        if (!cancelled) setError(true);
       }
       if (!cancelled) setLoading(false);
     }
     load();
     return () => { cancelled = true; };
-  }, [favoriteIds]);
+  }, []);
+
+  // Filter the full index by favorites — instant, no extra API calls
+  const pokemon = allPokemon
+    .filter((p) => favoriteIds.includes(p.id))
+    .sort((a, b) => a.id - b.id);
 
   const completionPercent = Math.round((favoriteIds.length / TOTAL_POKEMON) * 100);
 
@@ -97,7 +98,12 @@ export default function FavoritesPage() {
       </div>
 
       {/* Favorites Grid */}
-      {loading ? (
+      {error ? (
+        <div className="py-20 text-center">
+          <p className="text-lg font-medium text-red-400">A wild error appeared!</p>
+          <p className="mt-1 text-sm text-muted-foreground">Failed to load Pokemon data. Try refreshing.</p>
+        </div>
+      ) : loading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: Math.min(favoriteIds.length, 10) || 4 }, (_, i) => (
             <PokemonCardSkeleton key={i} />

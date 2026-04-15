@@ -22,6 +22,7 @@ interface PokemonPickerProps {
 export function PokemonPicker({ open, onClose, onSelect }: PokemonPickerProps) {
   const [index, setIndex] = useState<PokemonIndexEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selecting, setSelecting] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -37,11 +38,12 @@ export function PokemonPicker({ open, onClose, onSelect }: PokemonPickerProps) {
 
     async function load() {
       setLoading(true);
+      setError(null);
       try {
         const fullIndex = await getFullPokemonIndex();
         if (!cancelled) setIndex(fullIndex);
-      } catch (err) {
-        console.error("Failed to load Pokemon index:", err);
+      } catch {
+        if (!cancelled) setError("Failed to load Pokemon list. Please try again.");
       }
       if (!cancelled) setLoading(false);
     }
@@ -88,8 +90,8 @@ export function PokemonPicker({ open, onClose, onSelect }: PokemonPickerProps) {
       const full = await getPokemon(entry.id);
       onSelect(full);
       onClose();
-    } catch (err) {
-      console.error("Failed to load Pokemon:", err);
+    } catch {
+      setError(`Failed to load ${capitalize(entry.name)}. Tap to try again.`);
     }
     setSelecting(null);
   }
@@ -100,8 +102,11 @@ export function PokemonPicker({ open, onClose, onSelect }: PokemonPickerProps) {
         <DialogHeader>
           <DialogTitle className="text-lg font-extrabold">Choose a Pokemon</DialogTitle>
           <p className="text-xs text-muted-foreground">
-            {loading ? "Loading..." : `${filtered.length} of ${index.length} Pokemon`}
+            {loading ? "Loading..." : error ? "" : `${filtered.length} of ${index.length} Pokemon`}
           </p>
+          {error && (
+            <p className="text-xs font-medium text-red-400">{error}</p>
+          )}
         </DialogHeader>
 
         {/* Search & Filter */}

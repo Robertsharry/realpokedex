@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -18,6 +19,7 @@ interface PokemonCardProps {
 export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
   const { isFavorite, toggleFavorite } = useFavoritesStore();
   const { isShiny, toggleShiny } = useShinyStore();
+  const [imgError, setImgError] = useState(false);
   const primaryType = pokemon.types[0]?.name ?? "normal";
   const colors = TYPE_COLORS[primaryType] ?? TYPE_COLORS.normal;
   const fav = isFavorite(pokemon.id);
@@ -33,7 +35,7 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
     >
       <Link href={`/pokemon/${pokemon.id}`}>
         <div
-          className="pokedex-screen relative overflow-hidden rounded-2xl p-4 transition-shadow duration-300 group-hover:shadow-lg group-hover:shadow-black/20"
+          className="pokedex-screen relative overflow-hidden rounded-2xl p-3 pb-3 transition-shadow duration-300 group-hover:shadow-lg group-hover:shadow-black/20"
           style={{
             background: `linear-gradient(135deg, ${colors.bg}18 0%, ${colors.bg}08 50%, transparent 100%)`,
           }}
@@ -44,24 +46,50 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
             style={{ backgroundColor: colors.bg }}
           />
 
-          {/* Pokemon ID */}
-          <p className="text-xs font-bold text-muted-foreground/60 font-mono">
-            {formatPokemonId(pokemon.id)}
-          </p>
+          {/* Top row: ID + shiny toggle */}
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-xs font-bold text-muted-foreground/60">
+              {formatPokemonId(pokemon.id)}
+            </p>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleShiny(pokemon.id);
+              }}
+              className="relative z-10 rounded-full p-1 transition-all hover:scale-125"
+              aria-label={shiny ? "Show normal variant" : "Show shiny variant"}
+            >
+              <Sparkles
+                className={`h-3.5 w-3.5 transition-colors ${
+                  shiny
+                    ? "fill-yellow-400 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)]"
+                    : "text-muted-foreground/30 group-hover:text-muted-foreground/60"
+                }`}
+              />
+            </button>
+          </div>
 
           {/* Artwork */}
-          <div className={`relative mx-auto my-2 h-28 w-28 ${shiny ? "animate-shiny-glow" : ""}`}>
-            <Image
-              src={getArtworkUrl(pokemon.id, shiny)}
-              alt={`${pokemon.name}${shiny ? " (shiny)" : ""}`}
-              fill
-              sizes="112px"
-              className="object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-110"
-              loading={index < 12 ? "eager" : "lazy"}
-              priority={index < 4}
-            />
+          <div className={`relative mx-auto my-1.5 h-28 w-28 ${shiny ? "animate-shiny-glow" : ""}`}>
+            {imgError ? (
+              <div className="flex h-full w-full items-center justify-center rounded-xl bg-muted/20 text-muted-foreground/30">
+                <span className="text-3xl">?</span>
+              </div>
+            ) : (
+              <Image
+                src={getArtworkUrl(pokemon.id, shiny)}
+                alt={`${pokemon.name}${shiny ? " (shiny)" : ""}`}
+                fill
+                sizes="112px"
+                className="object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-110"
+                loading={index < 12 ? "eager" : "lazy"}
+                priority={index < 4}
+                onError={() => setImgError(true)}
+              />
+            )}
             {/* Shiny sparkles overlay */}
-            {shiny && (
+            {shiny && !imgError && (
               <>
                 <Sparkles className="absolute -left-1 top-2 h-3.5 w-3.5 animate-sparkle fill-yellow-300 text-yellow-300" style={{ animationDelay: "0s" }} />
                 <Sparkles className="absolute -right-1 top-6 h-3 w-3 animate-sparkle fill-yellow-200 text-yellow-200" style={{ animationDelay: "0.5s" }} />
@@ -76,7 +104,7 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
           </h3>
 
           {/* Types */}
-          <div className="mt-2 flex justify-center gap-1.5">
+          <div className="mt-1.5 flex justify-center gap-1.5">
             {pokemon.types.map((t) => (
               <TypeBadge key={t.name} type={t.name} size="sm" />
             ))}
@@ -84,40 +112,21 @@ export function PokemonCard({ pokemon, index = 0 }: PokemonCardProps) {
         </div>
       </Link>
 
-      {/* Shiny toggle - top left */}
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleShiny(pokemon.id);
-        }}
-        className="absolute left-3 top-3 z-10 rounded-full p-1.5 transition-all hover:scale-110"
-        aria-label={shiny ? "Show normal variant" : "Show shiny variant"}
-      >
-        <Sparkles
-          className={`h-4 w-4 transition-colors ${
-            shiny
-              ? "fill-yellow-400 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)]"
-              : "text-muted-foreground/30 group-hover:text-muted-foreground/60"
-          }`}
-        />
-      </button>
-
-      {/* Favorite button - top right */}
+      {/* Favorite button - top right, outside the card link */}
       <button
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           toggleFavorite(pokemon.id);
         }}
-        className="absolute right-3 top-3 z-10 rounded-full p-1.5 transition-all hover:scale-110"
+        className="absolute right-2 top-2 z-10 rounded-full bg-background/50 p-1.5 backdrop-blur-sm transition-all hover:scale-110 hover:bg-background/80"
         aria-label={fav ? "Remove from favorites" : "Add to favorites"}
       >
         <Heart
           className={`h-4 w-4 transition-colors ${
             fav
               ? "fill-red-500 text-red-500"
-              : "text-muted-foreground/30 group-hover:text-muted-foreground/60"
+              : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
           }`}
         />
       </button>

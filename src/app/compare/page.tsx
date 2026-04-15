@@ -43,6 +43,25 @@ import type { Pokemon, PokemonMove } from "@/lib/types";
 type Mode = "compare" | "move-select" | "battle";
 type PickTarget = "A1" | "A2" | "B1" | "B2" | null;
 
+// Battle constants
+const MAX_MOVES = 4;
+const MOVE_FETCH_BATCH = 10;
+const BATTLE_ANIMATION_MS = 300;
+const BATTLE_LEVEL = 100;
+const HP_GREEN_THRESHOLD = 50;
+const HP_YELLOW_THRESHOLD = 20;
+
+// Radar chart constants
+const STAT_NAMES = ["hp", "attack", "defense", "special-attack", "special-defense", "speed"];
+const STAT_COUNT = STAT_NAMES.length;
+const RADAR_RADIUS = 120;
+const RADAR_CENTER = 150;
+const RADAR_LABEL_R = 140;
+const RADAR_SCALES = [1, 0.75, 0.5, 0.25];
+const MAX_STAT_VALUE = 255;
+const PLAYER_COLOR = "#6390F0";
+const OPPONENT_COLOR = "#EE8130";
+
 export default function ComparePage() {
   // 2 Pokemon per side
   const [playerTeam, setPlayerTeam] = useState<(Pokemon | null)[]>([null, null]);
@@ -60,6 +79,7 @@ export default function ComparePage() {
   const [showOpponentMoves, setShowOpponentMoves] = useState(false);
   const [battleState, setBattleState] = useState<BattleState | null>(null);
   const [animating, setAnimating] = useState(false);
+  const opponentMovesRef = useRef<PokemonMove[][]>([]);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,8 +105,8 @@ export default function ComparePage() {
       while (id2 === id1) id2 = Math.floor(Math.random() * TOTAL_POKEMON) + 1;
       const [p1, p2] = await Promise.all([getPokemon(id1), getPokemon(id2)]);
       setOpponentTeam([p1, p2]);
-    } catch (err) {
-      console.error("Claude failed to pick:", err);
+    } catch {
+      // Error handled silently — user can retry with the button
     }
     setClaudePicking(false);
   }
@@ -102,8 +122,8 @@ export default function ComparePage() {
         moves: { name: string; learnMethod: string; levelLearnedAt: number }[]
       ) => {
         const results: PokemonMove[] = [];
-        for (let i = 0; i < moves.length; i += 10) {
-          const batch = moves.slice(i, i + 10);
+        for (let i = 0; i < moves.length; i += MOVE_FETCH_BATCH) {
+          const batch = moves.slice(i, i + MOVE_FETCH_BATCH);
           const details = await Promise.all(
             batch.map(async (m) => {
               try {
@@ -134,12 +154,12 @@ export default function ComparePage() {
       setMoveSelectSlot(0);
       setMode("move-select");
 
-      // Store opponent moves in a ref-like closure for battle start
-      (window as unknown as Record<string, unknown>).__opponentMoves = oMoves.map((moves, i) =>
+      // Store opponent moves in ref for battle start
+      opponentMovesRef.current = oMoves.map((moves, i) =>
         pickSmartMoves(moves, activeOpponents[i].types.map((t) => t.name))
       );
-    } catch (err) {
-      console.error("Failed to load moves:", err);
+    } catch {
+      // Move loading failed — user can retry by pressing Battle again
     }
     setLoadingMoves(false);
   }
@@ -149,7 +169,7 @@ export default function ComparePage() {
     const activeOpponents = opponentTeam.filter(Boolean) as Pokemon[];
     if (activePlayers.length === 0 || activeOpponents.length === 0) return;
 
-    const opponentMoves = (window as unknown as Record<string, unknown>).__opponentMoves as PokemonMove[][];
+    const opponentMoves = opponentMovesRef.current;
 
     const pTeam: BattleInitEntry[] = activePlayers.map((p, i) => ({
       pokemon: p,
@@ -172,7 +192,7 @@ export default function ComparePage() {
       const newState = executeTurn(battleState, moveIndex);
       setBattleState(newState);
       setAnimating(false);
-    }, 300);
+    }, BATTLE_ANIMATION_MS);
   }
 
   function resetBattle() {
@@ -189,7 +209,7 @@ export default function ComparePage() {
       const exists = current.find((m) => m.name === move.name);
       if (exists) {
         updated[slot] = current.filter((m) => m.name !== move.name);
-      } else if (current.length < 4) {
+      } else if (current.length < MAX_MOVES) {
         updated[slot] = [...current, move];
       }
       return updated;
@@ -212,7 +232,7 @@ export default function ComparePage() {
     return "Neutral type matchup";
   }
 
-  const statNames = ["hp", "attack", "defense", "special-attack", "special-defense", "speed"];
+  const statNames = STAT_NAMES;
 
   // ── Battle Mode UI ──────────────────────────────────────────────
   if (mode === "battle" && battleState) {
@@ -223,7 +243,7 @@ export default function ComparePage() {
     const opponentHpPct = Math.max(0, (oActive.stats.hp / oActive.stats.maxHp) * 100);
 
     const hpColor = (pct: number) =>
-      pct > 50 ? "#22c55e" : pct > 20 ? "#eab308" : "#ef4444";
+      pct > HP_GREEN_THRESHOLD ? "#22c55e" : pct > HP_YELLOW_THRESHOLD ? "#eab308" : "#ef4444";
 
     return (
       <div>
@@ -282,7 +302,7 @@ export default function ComparePage() {
               <div className="rounded-lg bg-black/30 px-3 py-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold">{capitalize(oActive.pokemon.name)}</span>
-                  <span className="text-xs text-muted-foreground">Lv100</span>
+                  <span className="text-xs text-muted-foreground">Lv{BATTLE_LEVEL}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="text-[10px] font-bold text-muted-foreground">HP</span>
@@ -352,7 +372,7 @@ export default function ComparePage() {
               <div className="rounded-lg bg-black/30 px-3 py-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold">{capitalize(pActive.pokemon.name)}</span>
-                  <span className="text-xs text-muted-foreground">Lv100</span>
+                  <span className="text-xs text-muted-foreground">Lv{BATTLE_LEVEL}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="text-[10px] font-bold text-muted-foreground">HP</span>
@@ -528,7 +548,7 @@ export default function ComparePage() {
     const damagingMoves = currentMoves.filter((m) => (m.power ?? 0) > 0);
     const currentSelected = selectedMoves[moveSelectSlot] ?? [];
     const isLastSlot = moveSelectSlot >= activePlayers.length - 1;
-    const allSlotsReady = selectedMoves.every((s, i) => i >= activePlayers.length || s.length === 4);
+    const allSlotsReady = selectedMoves.every((s, i) => i >= activePlayers.length || s.length === MAX_MOVES);
 
     if (!currentPokemon) {
       setMode("compare");
@@ -564,7 +584,7 @@ export default function ComparePage() {
           </div>
           <p className="text-sm font-bold">{capitalize(currentPokemon.name)}</p>
           <p className="text-xs text-muted-foreground">
-            Select 4 moves ({currentSelected.length}/4)
+            Select {MAX_MOVES} moves ({currentSelected.length}/{MAX_MOVES})
           </p>
         </div>
 
@@ -582,7 +602,7 @@ export default function ComparePage() {
           >
             <Shuffle className="h-3.5 w-3.5" /> Random
           </Button>
-          {currentSelected.length === 4 && (
+          {currentSelected.length === MAX_MOVES && (
             isLastSlot ? (
               allSlotsReady && (
                 <Button size="sm" onClick={startBattle} className="gap-1">
@@ -615,7 +635,7 @@ export default function ComparePage() {
                   <button
                     key={move.name}
                     onClick={() => toggleMoveSelection(moveSelectSlot, move)}
-                    disabled={!isSelected && currentSelected.length >= 4}
+                    disabled={!isSelected && currentSelected.length >= MAX_MOVES}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all ${
                       isSelected
                         ? "ring-2"
@@ -834,45 +854,47 @@ export default function ComparePage() {
 
           <div className="mb-8 flex justify-center">
             <svg viewBox="0 0 300 300" className="h-64 w-64">
-              {[1, 0.75, 0.5, 0.25].map((scale) => (
+              {RADAR_SCALES.map((scale) => (
                 <polygon
                   key={scale}
                   points={statNames.map((_, i) => {
-                    const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
-                    const r = 120 * scale;
-                    return `${150 + r * Math.cos(angle)},${150 + r * Math.sin(angle)}`;
+                    const angle = (Math.PI * 2 * i) / STAT_COUNT - Math.PI / 2;
+                    const r = RADAR_RADIUS * scale;
+                    return `${RADAR_CENTER + r * Math.cos(angle)},${RADAR_CENTER + r * Math.sin(angle)}`;
                   }).join(" ")}
                   fill="none" stroke="currentColor" strokeWidth="0.5" className="text-border"
                 />
               ))}
               {statNames.map((_, i) => {
-                const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+                const angle = (Math.PI * 2 * i) / STAT_COUNT - Math.PI / 2;
                 return (
-                  <line key={i} x1="150" y1="150"
-                    x2={150 + 120 * Math.cos(angle)} y2={150 + 120 * Math.sin(angle)}
+                  <line key={i} x1={RADAR_CENTER} y1={RADAR_CENTER}
+                    x2={RADAR_CENTER + RADAR_RADIUS * Math.cos(angle)} y2={RADAR_CENTER + RADAR_RADIUS * Math.sin(angle)}
                     stroke="currentColor" strokeWidth="0.5" className="text-border" />
                 );
               })}
               <polygon
                 points={statNames.map((stat, i) => {
-                  const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+                  const angle = (Math.PI * 2 * i) / STAT_COUNT - Math.PI / 2;
                   const val = playerTeam[0]!.stats.find((s) => s.name === stat)?.baseStat ?? 0;
-                  return `${150 + ((val / 255) * 120) * Math.cos(angle)},${150 + ((val / 255) * 120) * Math.sin(angle)}`;
+                  const r = (val / MAX_STAT_VALUE) * RADAR_RADIUS;
+                  return `${RADAR_CENTER + r * Math.cos(angle)},${RADAR_CENTER + r * Math.sin(angle)}`;
                 }).join(" ")}
-                fill="rgba(99, 144, 240, 0.2)" stroke="#6390F0" strokeWidth="2"
+                fill={`${PLAYER_COLOR}33`} stroke={PLAYER_COLOR} strokeWidth="2"
               />
               <polygon
                 points={statNames.map((stat, i) => {
-                  const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+                  const angle = (Math.PI * 2 * i) / STAT_COUNT - Math.PI / 2;
                   const val = opponentTeam[0]!.stats.find((s) => s.name === stat)?.baseStat ?? 0;
-                  return `${150 + ((val / 255) * 120) * Math.cos(angle)},${150 + ((val / 255) * 120) * Math.sin(angle)}`;
+                  const r = (val / MAX_STAT_VALUE) * RADAR_RADIUS;
+                  return `${RADAR_CENTER + r * Math.cos(angle)},${RADAR_CENTER + r * Math.sin(angle)}`;
                 }).join(" ")}
-                fill="rgba(238, 129, 48, 0.2)" stroke="#EE8130" strokeWidth="2"
+                fill={`${OPPONENT_COLOR}33`} stroke={OPPONENT_COLOR} strokeWidth="2"
               />
               {statNames.map((stat, i) => {
-                const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+                const angle = (Math.PI * 2 * i) / STAT_COUNT - Math.PI / 2;
                 return (
-                  <text key={stat} x={150 + 140 * Math.cos(angle)} y={150 + 140 * Math.sin(angle)}
+                  <text key={stat} x={RADAR_CENTER + RADAR_LABEL_R * Math.cos(angle)} y={RADAR_CENTER + RADAR_LABEL_R * Math.sin(angle)}
                     textAnchor="middle" dominantBaseline="middle"
                     className="fill-muted-foreground text-[10px] font-bold"
                   >{STAT_LABELS[stat]}</text>
@@ -883,11 +905,11 @@ export default function ComparePage() {
 
           <div className="mb-6 flex justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-[#6390F0]" />
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: PLAYER_COLOR }} />
               <span>{capitalize(playerTeam[0]!.name)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-[#EE8130]" />
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: OPPONENT_COLOR }} />
               <span>{capitalize(opponentTeam[0]!.name)}</span>
             </div>
           </div>
@@ -900,16 +922,16 @@ export default function ComparePage() {
               return (
                 <div key={stat} className="flex items-center gap-2">
                   <span className="w-8 text-right text-xs font-bold text-muted-foreground">{STAT_LABELS[stat]}</span>
-                  <span className={`w-8 text-right text-xs font-bold tabular-nums ${aVal >= bVal ? "text-[#6390F0]" : "text-muted-foreground"}`}>{aVal}</span>
+                  <span className={`w-8 text-right text-xs font-bold tabular-nums`} style={{ color: aVal >= bVal ? PLAYER_COLOR : undefined }}>{aVal}</span>
                   <div className="flex flex-1 gap-0.5">
                     <div className="flex h-4 flex-1 justify-end overflow-hidden rounded-l-full bg-muted/30">
-                      <motion.div className="rounded-l-full bg-[#6390F0]" initial={{ width: 0 }} animate={{ width: `${(aVal / max) * 100}%` }} transition={{ duration: 0.6 }} />
+                      <motion.div className="rounded-l-full" style={{ backgroundColor: PLAYER_COLOR }} initial={{ width: 0 }} animate={{ width: `${(aVal / max) * 100}%` }} transition={{ duration: 0.6 }} />
                     </div>
                     <div className="flex h-4 flex-1 overflow-hidden rounded-r-full bg-muted/30">
-                      <motion.div className="rounded-r-full bg-[#EE8130]" initial={{ width: 0 }} animate={{ width: `${(bVal / max) * 100}%` }} transition={{ duration: 0.6 }} />
+                      <motion.div className="rounded-r-full" style={{ backgroundColor: OPPONENT_COLOR }} initial={{ width: 0 }} animate={{ width: `${(bVal / max) * 100}%` }} transition={{ duration: 0.6 }} />
                     </div>
                   </div>
-                  <span className={`w-8 text-xs font-bold tabular-nums ${bVal >= aVal ? "text-[#EE8130]" : "text-muted-foreground"}`}>{bVal}</span>
+                  <span className={`w-8 text-xs font-bold tabular-nums`} style={{ color: bVal >= aVal ? OPPONENT_COLOR : undefined }}>{bVal}</span>
                 </div>
               );
             })}

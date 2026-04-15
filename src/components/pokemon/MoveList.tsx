@@ -24,6 +24,7 @@ const CATEGORY_ICONS = {
 export function MoveList({ pokemonId, pokemonTypes }: MoveListProps) {
   const [moves, setMoves] = useState<PokemonMove[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("level-up");
 
@@ -59,8 +60,8 @@ export function MoveList({ pokemonId, pokemonTypes }: MoveListProps) {
         }
 
         if (!cancelled) setMoves(allMoves);
-      } catch (err) {
-        console.error("Failed to load moves:", err);
+      } catch {
+        if (!cancelled) setError(true);
       }
       if (!cancelled) setLoading(false);
     }
@@ -92,6 +93,14 @@ export function MoveList({ pokemonId, pokemonTypes }: MoveListProps) {
     );
   }
 
+  if (error) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        Failed to load moves. Try refreshing the page.
+      </p>
+    );
+  }
+
   return (
     <div>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -119,15 +128,15 @@ export function MoveList({ pokemonId, pokemonTypes }: MoveListProps) {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-base">
                 <thead>
-                  <tr className="border-b border-border/50 text-xs text-muted-foreground">
-                    {activeTab === "level-up" && <th className="px-2 py-2 text-left">Lv.</th>}
-                    <th className="px-2 py-2 text-left">Move</th>
-                    <th className="px-2 py-2 text-left">Type</th>
-                    <th className="px-2 py-2 text-center">Cat.</th>
-                    <th className="px-2 py-2 text-right">Pow</th>
-                    <th className="px-2 py-2 text-right">Acc</th>
+                  <tr className="border-b-2 border-current/10 text-sm font-extrabold uppercase tracking-wide text-muted-foreground">
+                    {activeTab === "level-up" && <th className="px-3 py-2.5 text-left">Lv.</th>}
+                    <th className="px-3 py-2.5 text-left">Move</th>
+                    <th className="px-3 py-2.5 text-left">Type</th>
+                    <th className="px-3 py-2.5 text-center">Cat.</th>
+                    <th className="px-3 py-2.5 text-right">Pow</th>
+                    <th className="px-3 py-2.5 text-right">Acc</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -137,31 +146,31 @@ export function MoveList({ pokemonId, pokemonTypes }: MoveListProps) {
                     return (
                       <tr
                         key={`${move.name}-${i}`}
-                        className="border-b border-border/30 transition-colors hover:bg-accent/50"
+                        className="border-b border-current/5 transition-colors hover:bg-black/[0.04]"
                       >
                         {activeTab === "level-up" && (
-                          <td className="px-2 py-2 tabular-nums text-muted-foreground">
+                          <td className="px-3 py-2.5 font-mono text-sm font-bold tabular-nums text-muted-foreground">
                             {move.levelLearnedAt || "—"}
                           </td>
                         )}
-                        <td className="px-2 py-2 font-medium">
-                          <div className="flex items-center gap-1.5">
+                        <td className="px-3 py-2.5 font-bold">
+                          <div className="flex items-center gap-2">
                             {isStab && (
-                              <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                              <Star className="h-3.5 w-3.5 shrink-0 fill-yellow-500 text-yellow-500" />
                             )}
                             {capitalize(move.name.replace(/-/g, " "))}
                           </div>
                         </td>
-                        <td className="px-2 py-2">
-                          <TypeBadge type={move.type} size="sm" />
+                        <td className="px-3 py-2.5">
+                          <TypeBadge type={move.type} size="md" />
                         </td>
-                        <td className="px-2 py-2 text-center">
-                          <CategoryIcon className="mx-auto h-4 w-4 text-muted-foreground" />
+                        <td className="px-3 py-2.5 text-center">
+                          <CategoryIcon className="mx-auto h-5 w-5" />
                         </td>
-                        <td className="px-2 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2.5 text-right font-mono font-extrabold tabular-nums">
                           {move.power ?? "—"}
                         </td>
-                        <td className="px-2 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2.5 text-right font-mono font-extrabold tabular-nums">
                           {move.accuracy ? `${move.accuracy}%` : "—"}
                         </td>
                       </tr>

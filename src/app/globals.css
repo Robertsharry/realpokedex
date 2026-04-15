@@ -216,7 +216,10 @@
   animation: scanner-pulse 2s ease-in-out infinite;
 }
 
-/* Pokedex screen panel — the green-tinted screen area */
+/* Pokedex screen panel — the hero screen always has a dark
+   background (inline style with type color gradient), so we
+   force all theme variables to bright white/light for max
+   legibility against the dark backdrop.                       */
 .pokedex-screen {
   background: linear-gradient(145deg, oklch(0.15 0.015 250), oklch(0.12 0.01 250));
   border: 2px solid oklch(0.3 0.02 250);
@@ -226,6 +229,16 @@
     0 4px 20px oklch(0 0 0 / 40%),
     0 0 0 1px oklch(0 0 0 / 20%);
   position: relative;
+
+  /* Force bright text for the dark hero background */
+  --foreground: #ffffff;
+  --muted-foreground: rgba(255, 255, 255, 0.75);
+  --accent: rgba(255, 255, 255, 0.08);
+  --accent-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
 }
 
 /* Subtle scan lines on dark screens */
@@ -275,7 +288,8 @@
   background: linear-gradient(145deg, #dc2626, #c42020);
 }
 
-/* Light mode screen override */
+/* Light mode screen override — background is overridden by
+   inline style on the hero, but we keep bright text vars */
 :root .pokedex-screen {
   background: linear-gradient(145deg, #f0f8f0, #e8f4e8);
   border-color: #a8c8a8;
@@ -284,6 +298,16 @@
     inset 0 0 40px rgba(100, 180, 100, 0.1),
     0 4px 20px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(0, 0, 0, 0.08);
+
+  /* Hero always has dark bg (inline style), keep text bright */
+  --foreground: #ffffff;
+  --muted-foreground: rgba(255, 255, 255, 0.75);
+  --accent: rgba(255, 255, 255, 0.08);
+  --accent-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
 }
 
 :root .pokedex-screen::after {
@@ -335,6 +359,340 @@
     rgba(0, 0, 0, 0.2)
   );
   margin: 0 -1rem;
+}
+
+/* ── Pokedex Detail Page — Panel System ────────────────────────── */
+
+/* Each section on the detail page is a hardware panel */
+.dex-panel {
+  background: linear-gradient(145deg, #c42020, #a31a1a);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow:
+    0 2px 0 #7f1d1d,
+    0 4px 0 #450a0a,
+    0 6px 16px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+:root .dex-panel {
+  background: linear-gradient(145deg, #dc2626, #c42020);
+}
+
+.dex-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: linear-gradient(90deg, rgba(0,0,0,0.2), transparent);
+}
+
+.dex-panel-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px currentColor;
+  flex-shrink: 0;
+}
+
+/* ── Panel body: green LCD screen (consistent in all modes) ──── */
+/* :root always matches <html>, so :root .dex-panel-body wins
+   over .dex-panel-body regardless of .dark class. We embrace
+   the green LCD look and override ALL theme variables so every
+   Tailwind utility (bg-muted, bg-accent, hover:bg-accent, etc.)
+   resolves correctly against the green background.              */
+
+.dex-panel-body {
+  background: linear-gradient(145deg, #f0f8f0, #e8f4e8);
+  border: 2px solid #a8c8a8;
+  border-top: none;
+  border-radius: 0 0 1rem 1rem;
+  padding: 1.25rem;
+  box-shadow:
+    inset 0 1px 0 #d0e8d0,
+    inset 0 0 30px rgba(100, 180, 100, 0.08);
+  position: relative;
+
+  /* Override EVERY theme variable for the green LCD context */
+  --foreground: #1a2e1a;
+  --muted-foreground: #3d5c3d;
+  --background: #e8f4e8;
+  --muted: rgba(26, 46, 26, 0.08);
+  --accent: rgba(26, 46, 26, 0.07);
+  --accent-foreground: #1a2e1a;
+  --card: #e0f0e0;
+  --card-foreground: #1a2e1a;
+  --popover: #e8f4e8;
+  --popover-foreground: #1a2e1a;
+  --secondary: rgba(26, 46, 26, 0.06);
+  --secondary-foreground: #1a2e1a;
+  --input: rgba(0, 0, 0, 0.06);
+  --border: rgba(0, 60, 0, 0.15);
+  --ring: rgba(0, 100, 0, 0.3);
+  --primary: #2d6a2d;
+  --primary-foreground: #f0f8f0;
+  --destructive: #b91c1c;
+  color: #1a2e1a;
+}
+
+/* Subtle scan lines inside panels */
+.dex-panel-body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 80, 0, 0.015) 3px,
+    rgba(0, 80, 0, 0.015) 6px
+  );
+  border-radius: inherit;
+}
+
+/* Force ALL text inside panels to be max-legible */
+.dex-panel-body *:not([style*="color"]) {
+  --tw-text-opacity: 1;
+}
+
+/* Override Tailwind's muted-foreground inside panels */
+.dex-panel-body .text-muted-foreground {
+  color: var(--muted-foreground) !important;
+  opacity: 1 !important;
+}
+
+.dex-panel-body .text-foreground,
+.dex-panel-body .text-foreground\/80 {
+  color: var(--foreground) !important;
+  opacity: 1 !important;
+}
+
+/* Table text */
+.dex-panel-body table { color: var(--foreground); }
+.dex-panel-body th { color: var(--muted-foreground) !important; font-weight: 800 !important; }
+.dex-panel-body td { color: var(--foreground) !important; font-weight: 600 !important; }
+
+/* Input styling */
+.dex-panel-body input {
+  color: var(--foreground) !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: var(--border) !important;
+}
+.dex-panel-body input::placeholder {
+  color: var(--muted-foreground) !important;
+  opacity: 0.7;
+}
+.dex-panel-body input:focus {
+  border-color: rgba(0, 100, 0, 0.3) !important;
+  box-shadow: 0 0 0 2px rgba(0, 100, 0, 0.08) !important;
+}
+
+/* Tab list + triggers — override bg-muted and data-active:bg-background */
+.dex-panel-body [data-slot="tabs-list"] {
+  background: rgba(26, 46, 26, 0.07) !important;
+  border: 1px solid rgba(0, 60, 0, 0.12) !important;
+}
+.dex-panel-body [data-slot="tabs-trigger"] {
+  color: var(--muted-foreground) !important;
+  font-weight: 800 !important;
+  font-size: 0.875rem !important;
+}
+.dex-panel-body [data-slot="tabs-trigger"]:hover {
+  color: var(--foreground) !important;
+  background: rgba(0, 60, 0, 0.06) !important;
+}
+.dex-panel-body [data-slot="tabs-trigger"][data-active] {
+  color: var(--foreground) !important;
+  background: rgba(0, 60, 0, 0.12) !important;
+  border-color: rgba(0, 60, 0, 0.15) !important;
+}
+
+/* ── Hover states inside panels ──────────────────────────────── */
+.dex-panel-body table tbody tr {
+  transition: background-color 0.15s ease;
+}
+.dex-panel-body table tbody tr:hover {
+  background: rgba(0, 60, 0, 0.05) !important;
+}
+
+.dex-panel-body a {
+  transition: background-color 0.15s ease;
+}
+.dex-panel-body a:hover {
+  color: var(--foreground) !important;
+  background: rgba(0, 60, 0, 0.06) !important;
+}
+
+/* Ability pills */
+.dex-panel-body .dex-ability-pill {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 60, 0, 0.15) !important;
+}
+.dex-panel-body .dex-ability-pill:hover {
+  background: rgba(0, 60, 0, 0.1) !important;
+  border-color: rgba(0, 60, 0, 0.22) !important;
+}
+
+/* Buttons inside panels (show more, expand, etc.) */
+.dex-panel-body button:not([data-slot]):hover {
+  background: rgba(0, 60, 0, 0.06) !important;
+}
+
+/* Borders inside panels */
+.dex-panel-body .border-border\/50,
+.dex-panel-body .border-border\/30,
+.dex-panel-body .border-border,
+.dex-panel-body .border-current\/10,
+.dex-panel-body .border-current\/5,
+.dex-panel-body .divide-current\/5 > * + * {
+  border-color: rgba(0, 60, 0, 0.12) !important;
+}
+
+/* ── Hyper-legible typography for the detail page ─────────────── */
+
+.dex-detail-page {
+  /* Bump base size for readability */
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.dex-section-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 200, 200, 0.85);
+}
+
+:root .dex-section-title {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* ── Hero typography — bright white on dark screen ─────────── */
+
+.dex-pokemon-name {
+  font-size: 2.5rem;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+@media (min-width: 640px) {
+  .dex-pokemon-name { font-size: 3.25rem; }
+}
+
+.dex-id-label {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.dex-genus {
+  margin-top: 0.375rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dex-flavor-text {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  font-weight: 500;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Hero buttons — bright on dark */
+.pokedex-screen button {
+  color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+}
+.pokedex-screen button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #ffffff !important;
+}
+
+/* Data field pairs (label + value) */
+.dex-data-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dex-data-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+
+.dex-data-value {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+/* Sub-section labels (e.g. "Weak to", "Resistant to") */
+.dex-sub-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Type effectiveness multipliers */
+.dex-panel-body .tabular-nums {
+  font-size: 0.9375rem !important;
+  font-weight: 900 !important;
+}
+
+/* Ability pills — always green LCD context */
+.dex-ability-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-size: 1rem;
+  color: var(--foreground);
+  background: rgba(0, 0, 0, 0.06);
+  border: 2px solid rgba(0, 60, 0, 0.15);
+}
+
+.dex-ability-hidden {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  background: rgba(0, 60, 0, 0.08);
+  padding: 0.1875rem 0.5rem;
+  border-radius: 0.375rem;
 }
 
 /* ── Scrollbar Styling ──────────────────────────────────────────── */
