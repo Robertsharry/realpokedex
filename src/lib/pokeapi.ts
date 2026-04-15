@@ -1,12 +1,14 @@
 import type {
   Pokemon,
+  PokemonIndexEntry,
   PokemonListItem,
   PokemonSpecies,
   EvolutionNode,
   PokemonMove,
   AbilityDetail,
+  PokemonType,
 } from "./types";
-import { getArtworkUrl, getSpriteUrl, getCryUrl, capitalize } from "./constants";
+import { getArtworkUrl, getSpriteUrl, getCryUrl, capitalize, ALL_TYPES, TOTAL_POKEMON } from "./constants";
 
 const BASE_URL = "https://pokeapi.co/api/v2";
 
@@ -160,6 +162,8 @@ export async function getMoveDetails(name: string): Promise<PokemonMove> {
     (e: any) => e.language.name === "en"
   );
 
+  const meta = data.meta;
+
   return {
     name: data.name,
     type: data.type.name,
@@ -170,6 +174,13 @@ export async function getMoveDetails(name: string): Promise<PokemonMove> {
     effectShort: englishEffect?.short_effect ?? "",
     learnMethod: "",
     levelLearnedAt: 0,
+    priority: data.priority ?? 0,
+    drain: meta?.drain ?? 0,
+    healing: meta?.healing ?? 0,
+    critRate: meta?.crit_rate ?? 0,
+    minHits: meta?.min_hits ?? null,
+    maxHits: meta?.max_hits ?? null,
+    flinchChance: meta?.flinch_chance ?? 0,
   };
 }
 
@@ -227,4 +238,54 @@ export async function getPokemonBatch(
 ): Promise<Pokemon[]> {
   const results = await Promise.all(ids.map((id) => getPokemon(id)));
   return results;
+}
+
+/** Fetch a lightweight index of ALL Pokemon (id, name, types).
+ *  Uses 1 list call + 18 type endpoint calls = 19 requests total.
+ *  All responses are cached by the service worker for offline use. */
+let indexPromise: Promise<PokemonIndexEntry[]> | null = null;
+
+export function getFullPokemonIndex(): Promise<PokemonIndexEntry[]> {
+  if (indexPromise) return indexPromise;
+  indexPromise = fetchFullIndex();
+  return indexPromise;
+}
+
+async function fetchFullIndex(): Promise<PokemonIndexEntry[]> {
+  // Step 1: Get all Pokemon names and IDs (1 request)
+  const list = await cachedFetch<{
+    results: { name: string; url: string }[];
+  }>(`${BASE_URL}/pokemon?limit=${TOTAL_POKEMON}&offset=0`);
+
+  // Step 2: Get type data from all 18 type endpoints in parallel
+  const typePromises = ALL_TYPES.map(async (typeName) => {
+    const data = await cachedFetch<{
+      pokemon: { pokemon: { url: string }; slot: number }[];
+    }>(`${BASE_URL}/type/${typeName}`);
+    return { typeName, pokemon: data.pokemon };
+  });
+
+  const typeResults = await Promise.all(typePromises);
+
+  // Build a map: pokemonId -> PokemonType[]
+  const typeMap = new Map<number, PokemonType[]>();
+  for (const { typeName, pokemon } of typeResults) {
+    for (const p of pokemon) {
+      const id = extractId(p.pokemon.url);
+      if (id > TOTAL_POKEMON) continue;
+      if (!typeMap.has(id)) typeMap.set(id, []);
+      typeMap.get(id)!.push({ slot: p.slot, name: typeName });
+    }
+  }
+
+  // Build entries, sorted by slot so primary type comes first
+  return list.results
+    .map((p) => {
+      const id = extractId(p.url);
+      const types = typeMap.get(id) ?? [];
+      types.sort((a, b) => a.slot - b.slot);
+      return { id, name: p.name, types };
+    })
+    .filter((e) => e.id <= TOTAL_POKEMON)
+    .sort((a, b) => a.id - b.id);
 }

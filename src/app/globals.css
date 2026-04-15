@@ -48,43 +48,44 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Light Mode (Pokedex Red Shell) ─────────────────────────────── */
 :root {
-  --background: oklch(0.98 0 0);
+  --background: #f8f0f0;
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: #fff5f5;
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: #fff5f5;
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.95 0 0);
+  --primary: #dc2626;
+  --primary-foreground: #ffffff;
+  --secondary: #fce4e4;
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.95 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.95 0 0);
+  --muted: #f3e8e8;
+  --muted-foreground: oklch(0.45 0.02 15);
+  --accent: #fce4e4;
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0 0);
-  --input: oklch(0.9 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
+  --border: #e8d0d0;
+  --input: #e8d0d0;
+  --ring: #dc2626;
+  --chart-1: #dc2626;
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --sidebar: #fff5f5;
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-primary: #dc2626;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fce4e4;
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-border: #e8d0d0;
+  --sidebar-ring: #dc2626;
 }
 
+/* ── Dark Mode (Pokedex Interior / Screen) ──────────────────────── */
 .dark {
-  /* Pokedex-inspired dark theme: deep blue-black background, red accents */
   --background: oklch(0.13 0.01 250);
   --foreground: oklch(0.93 0.005 210);
   --card: oklch(0.17 0.012 250);
@@ -130,7 +131,8 @@
   }
 }
 
-/* Custom animations */
+/* ── Core Animations ────────────────────────────────────────────── */
+
 @keyframes stat-bar-fill {
   from { width: 0%; }
 }
@@ -173,26 +175,16 @@
   animation: pokeball-spin 1s linear infinite;
 }
 
-/* Shiny sparkle animation */
+/* ── Shiny Effects ──────────────────────────────────────────────── */
+
 @keyframes sparkle {
   0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
   50% { opacity: 1; transform: scale(1) rotate(180deg); }
 }
 
-@keyframes sparkle-burst {
-  0% { opacity: 0; transform: scale(0); }
-  30% { opacity: 1; transform: scale(1.2); }
-  100% { opacity: 0; transform: scale(0.5) translateY(-20px); }
-}
-
 @keyframes shiny-glow {
   0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.3)); }
   50% { filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.2)); }
-}
-
-@keyframes scanner-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 182, 255, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(56, 182, 255, 0); }
 }
 
 .animate-sparkle {
@@ -203,30 +195,75 @@
   animation: shiny-glow 2s ease-in-out infinite;
 }
 
+/* ── Pokedex Device Aesthetic ───────────────────────────────────── */
+
+@keyframes scanner-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 182, 255, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(56, 182, 255, 0); }
+}
+
+@keyframes screen-glow {
+  0%, 100% { box-shadow: inset 0 0 30px rgba(56, 182, 255, 0.03); }
+  50% { box-shadow: inset 0 0 50px rgba(56, 182, 255, 0.06); }
+}
+
+@keyframes led-blink {
+  0%, 90%, 100% { opacity: 0.4; }
+  95% { opacity: 1; }
+}
+
 .animate-scanner-pulse {
   animation: scanner-pulse 2s ease-in-out infinite;
 }
 
-/* Pokedex device frame */
+/* Pokedex screen panel — the green-tinted screen area */
 .pokedex-screen {
   background: linear-gradient(145deg, oklch(0.15 0.015 250), oklch(0.12 0.01 250));
   border: 2px solid oklch(0.3 0.02 250);
   box-shadow:
     inset 0 1px 0 oklch(0.25 0.015 250),
+    inset 0 0 40px oklch(0 0 0 / 20%),
     0 4px 20px oklch(0 0 0 / 40%),
     0 0 0 1px oklch(0 0 0 / 20%);
+  position: relative;
 }
 
+/* Subtle scan lines on dark screens */
+.pokedex-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* Red shell frame */
 .pokedex-device {
   background: linear-gradient(145deg, #dc2626, #b91c1c, #991b1b);
   border-radius: 1.5rem;
   padding: 3px;
+  box-shadow:
+    0 2px 0 #7f1d1d,
+    0 4px 0 #450a0a,
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .pokedex-device-inner {
   background: linear-gradient(145deg, #c42020, #a31a1a);
   border-radius: 1.25rem;
   padding: 1rem;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Light mode device */
@@ -238,7 +275,70 @@
   background: linear-gradient(145deg, #dc2626, #c42020);
 }
 
-/* Scrollbar styling */
+/* Light mode screen override */
+:root .pokedex-screen {
+  background: linear-gradient(145deg, #f0f8f0, #e8f4e8);
+  border-color: #a8c8a8;
+  box-shadow:
+    inset 0 1px 0 #d0e8d0,
+    inset 0 0 40px rgba(100, 180, 100, 0.1),
+    0 4px 20px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+:root .pokedex-screen::after {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 80, 0, 0.02) 2px,
+    rgba(0, 80, 0, 0.02) 4px
+  );
+}
+
+/* Pokedex body wrapping the main content area */
+.pokedex-body {
+  position: relative;
+}
+
+/* Hardware details: screw dots */
+.pokedex-screw {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #666, #444);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  position: absolute;
+}
+
+.pokedex-screw::after {
+  content: "+";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6px;
+  color: rgba(0, 0, 0, 0.4);
+  font-weight: bold;
+}
+
+/* Hinge line */
+.pokedex-hinge {
+  height: 4px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.2),
+    rgba(0, 0, 0, 0.05),
+    rgba(0, 0, 0, 0.2)
+  );
+  margin: 0 -1rem;
+}
+
+/* ── Scrollbar Styling ──────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

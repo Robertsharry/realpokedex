@@ -3,6 +3,13 @@ export interface PokemonListItem {
   name: string;
 }
 
+/** Lightweight entry for the full Pokedex index (all 1025 Pokemon) */
+export interface PokemonIndexEntry {
+  id: number;
+  name: string;
+  types: PokemonType[];
+}
+
 export interface PokemonStat {
   name: string;
   baseStat: number;
@@ -66,6 +73,14 @@ export interface PokemonMove {
   effectShort: string;
   learnMethod: string;
   levelLearnedAt: number;
+  // Meta fields for battle effects
+  priority: number;
+  drain: number;      // % of damage healed (positive) or recoil (negative)
+  healing: number;    // % of max HP healed (status moves)
+  critRate: number;   // bonus crit stages
+  minHits: number | null;
+  maxHits: number | null;
+  flinchChance: number;
 }
 
 export interface AbilityDetail {

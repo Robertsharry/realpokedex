@@ -64,7 +64,7 @@ export default function RootLayout({
         <TooltipProvider>
           <StoreHydration>
             <Navbar />
-            <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-20 pt-6 md:pb-6">
+            <main className="pokedex-body mx-auto w-full max-w-7xl flex-1 px-4 pb-20 pt-6 md:pb-6">
               {children}
             </main>
           </StoreHydration>

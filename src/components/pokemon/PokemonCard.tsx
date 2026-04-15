@@ -8,10 +8,10 @@ import { TypeBadge } from "./TypeBadge";
 import { TYPE_COLORS, formatPokemonId, capitalize, getArtworkUrl } from "@/lib/constants";
 import { useFavoritesStore } from "@/stores/favorites-store";
 import { useShinyStore } from "@/stores/shiny-store";
-import type { Pokemon } from "@/lib/types";
+import type { PokemonIndexEntry } from "@/lib/types";
 
 interface PokemonCardProps {
-  pokemon: Pokemon;
+  pokemon: PokemonIndexEntry;
   index?: number;
 }
 

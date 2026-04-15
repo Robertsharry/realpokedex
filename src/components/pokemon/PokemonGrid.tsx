@@ -1,24 +1,22 @@
 "use client";
 
-import { useEffect, useState, useCallback, useDeferredValue, useRef } from "react";
+import { useEffect, useState, useDeferredValue, useRef } from "react";
 import { PokemonCard } from "./PokemonCard";
 import { PokemonCardSkeleton } from "./PokemonCardSkeleton";
-import { getPokemonBatch, getPokemonList } from "@/lib/pokeapi";
+import { getFullPokemonIndex } from "@/lib/pokeapi";
 import { useFavoritesStore } from "@/stores/favorites-store";
 import { GENERATIONS, ALL_TYPES, capitalize, TOTAL_POKEMON } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X, SlidersHorizontal } from "lucide-react";
-import type { Pokemon } from "@/lib/types";
+import { Search, X, SlidersHorizontal, CheckCircle2 } from "lucide-react";
+import type { PokemonIndexEntry } from "@/lib/types";
 
-const BATCH_SIZE = 40;
+const RENDER_BATCH = 80;
 
 export function PokemonGrid() {
-  const [allPokemon, setAllPokemon] = useState<Pokemon[]>([]);
+  const [pokemonIndex, setPokemonIndex] = useState<PokemonIndexEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [renderCount, setRenderCount] = useState(RENDER_BATCH);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [genFilter, setGenFilter] = useState<string>("");
@@ -28,85 +26,34 @@ export function PokemonGrid() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const { favoriteIds } = useFavoritesStore();
 
-  // Initial load
+  // Load full Pokemon index on mount (19 API calls, all cached by service worker)
   useEffect(() => {
-    async function loadInitial() {
+    async function loadIndex() {
       setLoading(true);
       try {
-        const list = await getPokemonList(0, BATCH_SIZE);
-        const ids = list.map((p) => p.id);
-        const batch = await getPokemonBatch(ids);
-        setAllPokemon(batch);
-        setOffset(BATCH_SIZE);
-        setHasMore(BATCH_SIZE < TOTAL_POKEMON);
+        const index = await getFullPokemonIndex();
+        setPokemonIndex(index);
       } catch (err) {
-        console.error("Failed to load Pokemon:", err);
+        console.error("Failed to load Pokemon index:", err);
       }
       setLoading(false);
     }
-    loadInitial();
+    loadIndex();
   }, []);
 
-  // Infinite scroll
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const list = await getPokemonList(offset, BATCH_SIZE);
-      if (list.length === 0) {
-        setHasMore(false);
-        return;
-      }
-      const ids = list.map((p) => p.id);
-      const batch = await getPokemonBatch(ids);
-      setAllPokemon((prev) => [...prev, ...batch]);
-      setOffset((prev) => prev + BATCH_SIZE);
-      if (offset + BATCH_SIZE >= TOTAL_POKEMON) {
-        setHasMore(false);
-      }
-    } catch (err) {
-      console.error("Failed to load more Pokemon:", err);
-    }
-    setLoadingMore(false);
-  }, [offset, loadingMore, hasMore]);
-
-  // Intersection observer for infinite scroll
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          loadMore();
-        }
-      },
-      { rootMargin: "400px" }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [loadMore, hasMore, loadingMore]);
-
-  // Filter and sort
-  const filtered = allPokemon.filter((p) => {
-    // Search filter
+  // Filter against the FULL index (all 1025 Pokemon)
+  const filtered = pokemonIndex.filter((p) => {
     if (deferredSearch) {
       const q = deferredSearch.toLowerCase();
       const matchesName = p.name.toLowerCase().includes(q);
       const matchesId = p.id.toString() === q || `#${p.id}` === q;
       if (!matchesName && !matchesId) return false;
     }
-
-    // Type filter
     if (typeFilter && !p.types.some((t) => t.name === typeFilter)) return false;
-
-    // Generation filter
     if (genFilter) {
       const gen = GENERATIONS.find((g) => g.name === genFilter);
       if (gen && (p.id < gen.range[0] || p.id > gen.range[1])) return false;
     }
-
     return true;
   });
 
@@ -116,16 +63,37 @@ export function PokemonGrid() {
         return a.name.localeCompare(b.name);
       case "name-desc":
         return b.name.localeCompare(a.name);
-      case "hp":
-        return (b.stats.find((s) => s.name === "hp")?.baseStat ?? 0) - (a.stats.find((s) => s.name === "hp")?.baseStat ?? 0);
-      case "attack":
-        return (b.stats.find((s) => s.name === "attack")?.baseStat ?? 0) - (a.stats.find((s) => s.name === "attack")?.baseStat ?? 0);
-      case "total":
-        return b.stats.reduce((sum, s) => sum + s.baseStat, 0) - a.stats.reduce((sum, s) => sum + s.baseStat, 0);
       default:
         return a.id - b.id;
     }
   });
+
+  // Progressive rendering: show `renderCount` at a time, load more on scroll
+  const visible = sorted.slice(0, renderCount);
+  const hasMore = renderCount < sorted.length;
+
+  // Reset render count when filters change
+  useEffect(() => {
+    setRenderCount(RENDER_BATCH);
+  }, [deferredSearch, typeFilter, genFilter, sortBy]);
+
+  // Intersection observer to render more cards as user scrolls
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setRenderCount((prev) => Math.min(prev + RENDER_BATCH, sorted.length));
+        }
+      },
+      { rootMargin: "400px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, sorted.length]);
 
   const hasActiveFilters = typeFilter || genFilter || deferredSearch;
 
@@ -139,7 +107,7 @@ export function PokemonGrid() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or number..."
+              placeholder="Search all 1025 Pokemon by name or number..."
               className="pl-10"
             />
             {search && (
@@ -193,9 +161,6 @@ export function PokemonGrid() {
               <option value="id">Sort: Number</option>
               <option value="name">Sort: A-Z</option>
               <option value="name-desc">Sort: Z-A</option>
-              <option value="hp">Sort: HP</option>
-              <option value="attack">Sort: Attack</option>
-              <option value="total">Sort: Total Stats</option>
             </select>
 
             {hasActiveFilters && (
@@ -218,9 +183,16 @@ export function PokemonGrid() {
 
         {/* Results count */}
         <p className="text-sm text-muted-foreground">
-          {hasActiveFilters
-            ? `Showing ${sorted.length} of ${allPokemon.length} loaded Pokemon`
-            : `${allPokemon.length} of ${TOTAL_POKEMON} Pokemon loaded`}
+          {loading ? (
+            "Loading all Pokemon..."
+          ) : hasActiveFilters ? (
+            `Found ${sorted.length} of ${TOTAL_POKEMON} Pokemon`
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              All {TOTAL_POKEMON} Pokemon loaded
+            </span>
+          )}
           {favoriteIds.length > 0 && ` · ${favoriteIds.length} favorited`}
         </p>
       </div>
@@ -239,22 +211,20 @@ export function PokemonGrid() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {sorted.map((pokemon, i) => (
+          {visible.map((pokemon, i) => (
             <PokemonCard key={pokemon.id} pokemon={pokemon} index={i} />
           ))}
         </div>
       )}
 
-      {/* Infinite scroll sentinel */}
-      {hasMore && !loading && !hasActiveFilters && (
+      {/* Progressive render sentinel */}
+      {hasMore && !loading && (
         <div ref={sentinelRef} className="flex justify-center py-8">
-          {loadingMore && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {Array.from({ length: 10 }, (_, i) => (
-                <PokemonCardSkeleton key={i} />
-              ))}
-            </div>
-          )}
+          <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {Array.from({ length: 10 }, (_, i) => (
+              <PokemonCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       )}
     </div>
